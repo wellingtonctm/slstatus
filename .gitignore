@@ -1,0 +1,32 @@
+# Object files
+*.o
+
+# Binary executables
+dwm
+
+# Build artifacts
+*.rej
+*.orig
+
+# Backup files
+*~
+*.bak
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Patch reject files
+*.rej
+
+# Configuration overrides
+config.h
+
+# Autostart scripts (optional if you include your own)
+autostart.sh
+
+# OS/Editor-specific
+.DS_Store
+.idea/
+.vscode/
