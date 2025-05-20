@@ -44,6 +44,9 @@ const char *keymap(const char *unused);
 /* load_avg */
 const char *load_avg(const char *unused);
 
+/* mic */
+const char *mic(const char *unused);
+
 /* netspeeds */
 const char *netspeed_rx(const char *interface);
 const char *netspeed_tx(const char *interface);
@@ -60,6 +63,7 @@ const char *ram_used(const char *unused);
 /* run_command */
 const char *run_command(const char *cmd);
 
+/* song */
 const char *songs(const char *unused);
 
 /* swap */
