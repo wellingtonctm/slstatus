@@ -6,12 +6,19 @@
 #include <string.h>
 #include <time.h>
 #include <X11/Xlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/file.h>
 
 #include "arg.h"
 #include "slstatus.h"
 #include "util.h"
 
-struct arg {
+static const char *pidfile_path = NULL;
+static int pidfile_fd = -1;
+
+struct arg
+{
 	const char *(*func)(const char *);
 	const char *fmt;
 	const char *args;
@@ -29,12 +36,48 @@ static Display *dpy;
 
 static char statuses[LEN(args)][CMDLEN] = {0};
 
+static const char *
+get_pidfile_path(void)
+{
+	return "/tmp/slstatus.pid";
+}
+
+static void
+write_pidfile(void)
+{
+	pidfile_path = get_pidfile_path();
+
+	pidfile_fd = open(pidfile_path, O_RDWR | O_CREAT, 0644);
+	if (pidfile_fd < 0)
+		die("open (pid file):");
+
+	if (flock(pidfile_fd, LOCK_EX | LOCK_NB) < 0)
+		die("slstatus already running (flock):");
+
+	if (ftruncate(pidfile_fd, 0) < 0)
+		die("ftruncate (pid file):");
+
+	char pidbuf[16];
+	int len = snprintf(pidbuf, sizeof(pidbuf), "%d\n", getpid());
+	if (write(pidfile_fd, pidbuf, len) != len)
+		die("write (pid file):");
+}
+
+static void
+remove_pidfile(void)
+{
+	if (pidfile_fd != -1)
+		close(pidfile_fd);
+	if (pidfile_path)
+		unlink(pidfile_path);
+}
+
 static void
 difftimespec(struct timespec *res, struct timespec *a, struct timespec *b)
 {
 	res->tv_sec = a->tv_sec - b->tv_sec - (a->tv_nsec < b->tv_nsec);
 	res->tv_nsec = a->tv_nsec - b->tv_nsec +
-	               (a->tv_nsec < b->tv_nsec) * 1E9;
+				   (a->tv_nsec < b->tv_nsec) * 1E9;
 }
 
 static void
@@ -50,10 +93,11 @@ printstatus(unsigned int iter)
 	char status[MAXLEN];
 	const char *res;
 
-	for (i = 0; i < LEN(args); i++) {
+	for (i = 0; i < LEN(args); i++)
+	{
 		if (!((!iter && !upsigno) || upsigno == SIGUSR1 ||
-			(!upsigno && args[i].turn > 0 && !(iter % args[i].turn)) ||
-			(args[i].signal >= 0 && upsigno - SIGRTMIN == args[i].signal)))
+			  (!upsigno && args[i].turn > 0 && !(iter % args[i].turn)) ||
+			  (args[i].signal >= 0 && upsigno - SIGRTMIN == args[i].signal)))
 			continue;
 
 		if (!(res = args[i].func(args[i].args)))
@@ -68,18 +112,20 @@ printstatus(unsigned int iter)
 		strcat(status, statuses[i]);
 	status[strlen(status)] = '\0';
 
-	if (sflag) {
+	if (sflag)
+	{
 		puts(status);
 		fflush(stdout);
 		if (ferror(stdout))
 			die("puts:");
-	} else {
+	}
+	else
+	{
 		if (XStoreName(dpy, DefaultRootWindow(dpy), status) < 0)
 			die("XStoreName: Allocation failed");
 		XFlush(dpy);
 	}
 }
-
 
 static void
 sighandler(const int signo)
@@ -87,20 +133,23 @@ sighandler(const int signo)
 	if ((signo <= SIGRTMAX && signo >= SIGRTMIN) || signo == SIGUSR1)
 		upsigno = signo;
 	else
+	{
+		remove_pidfile();
 		done = 1;
+	}
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	struct sigaction act;
 	struct timespec start, current, diff, intspec, wait;
 	unsigned int iter = 0;
 	int i, ret = 0;
 
-	ARGBEGIN {
+	ARGBEGIN
+	{
 	case 'v':
-		die("slstatus-"VERSION);
+		die("slstatus-" VERSION);
 		break;
 	case '1':
 		done = 1;
@@ -110,14 +159,18 @@ main(int argc, char *argv[])
 		break;
 	default:
 		usage();
-	} ARGEND
+	}
+	ARGEND
 
 	if (argc)
 		usage();
 
+	write_pidfile();
+	atexit(remove_pidfile);
+
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = sighandler;
-	sigaction(SIGINT,  &act, NULL);
+	sigaction(SIGINT, &act, NULL);
 	sigaction(SIGTERM, &act, NULL);
 	sigaction(SIGUSR1, &act, NULL);
 	for (i = SIGRTMIN; i <= SIGRTMAX; i++)
@@ -126,13 +179,15 @@ main(int argc, char *argv[])
 	if (!sflag && !(dpy = XOpenDisplay(NULL)))
 		die("XOpenDisplay: Failed to open display");
 
-	do {
+	do
+	{
 		if (clock_gettime(CLOCK_MONOTONIC, &start) < 0)
 			die("clock_gettime:");
 
 		printstatus(iter++);
 
-		if (!done) {
+		if (!done)
+		{
 			if (clock_gettime(CLOCK_MONOTONIC, &current) < 0)
 				die("clock_gettime:");
 			difftimespec(&diff, &current, &start);
@@ -141,9 +196,10 @@ main(int argc, char *argv[])
 			intspec.tv_nsec = (interval % 1000) * 1E6;
 			difftimespec(&wait, &intspec, &diff);
 
-			while(wait.tv_sec >= 0 &&
-			    (ret = nanosleep(&wait, &wait)) < 0 &&
-			    errno == EINTR && !done) {
+			while (wait.tv_sec >= 0 &&
+				   (ret = nanosleep(&wait, &wait)) < 0 &&
+				   errno == EINTR && !done)
+			{
 				printstatus(0);
 				errno = upsigno = 0;
 			}
@@ -152,7 +208,8 @@ main(int argc, char *argv[])
 		}
 	} while (!done);
 
-	if (!sflag) {
+	if (!sflag)
+	{
 		XStoreName(dpy, DefaultRootWindow(dpy), NULL);
 		if (XCloseDisplay(dpy) < 0)
 			die("XCloseDisplay: Failed to close display");
