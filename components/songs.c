@@ -70,7 +70,6 @@ check_paused(const char *sockpath)
 const char *
 songs(const char *unused)
 {
-	static char buf[MAX_TITLE_LEN + 4];
 	char title[256], path[512];
 	const char *home;
 	int pid;
@@ -99,9 +98,9 @@ songs(const char *unused)
 	paused = check_paused(path);
 
 	if (paused)
-		snprintf(buf, sizeof(buf), "[%.47s]", title);
+		snprintf(buf, sizeof(buf), "[%.47s] ", title);
 	else
-		snprintf(buf, sizeof(buf), "%.50s", title);
+		snprintf(buf, sizeof(buf), "%.50s ", title);
 
 	return buf;
 }

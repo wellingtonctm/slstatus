@@ -22,6 +22,6 @@ mic(const char *unused)
 	}
 	pclose(fp);
 
-	bprintf("%s", mic_muted ? "[MUTED]" : "");
+	bprintf("%s", mic_muted ? "[MUTED] " : "");
 	return buf;
 }
