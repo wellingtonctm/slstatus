@@ -2,7 +2,7 @@
 *.o
 
 # Binary executables
-dwm
+slstatus
 
 # Build artifacts
 *.rej
