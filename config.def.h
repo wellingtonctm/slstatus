@@ -68,9 +68,10 @@ static const char unknown_str[] = "n/a";
  * songs			   currently playing song        NULL
  */
 static const struct arg args[] = {
-	/* function format              argument   turn   signal */
+	/* function format     argument        turn       signal */
 	{ songs,	           "%s",           NULL,      0,      1 },
 	{ mic,  	           "%s",           NULL,      10,     2 },
+	{ fortivpn,  	       "%s",           NULL,      10,     3 },
 	{ cpu_perc,            "%s%% ",        NULL,      3,     -1 },
 	{ ram_perc,            "%s%% ",        NULL,      3,     -1 },
     { battery_perc_custom, "%s ",          "BAT0",    1,     -1 },

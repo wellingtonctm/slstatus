@@ -25,6 +25,9 @@ const char *disk_used(const char *path);
 /* entropy */
 const char *entropy(const char *unused);
 
+/* fortivpn */
+const char *fortivpn(const char *unused);
+
 /* hostname */
 const char *hostname(const char *unused);
 
