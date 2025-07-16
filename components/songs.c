@@ -98,9 +98,9 @@ songs(const char *unused)
 	paused = check_paused(path);
 
 	if (paused)
-		snprintf(buf, sizeof(buf), "[%.47s] ", title);
+		snprintf(buf, sizeof(buf), "[%.47s] • ", title);
 	else
-		snprintf(buf, sizeof(buf), "%.50s ", title);
+		snprintf(buf, sizeof(buf), "%.50s • ", title);
 
 	return buf;
 }
